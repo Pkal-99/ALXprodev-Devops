@@ -9,13 +9,15 @@ if [[ ! -f "$DATA_FILE" ]]; then
 fi
 
 # Extracting the required fields using jq
-name=$(jq -r '.name' "$DATA_FILE")
+#name=$(jq -r '.name' "$DATA_FILE")
 height=$(jq -r '.height' "$DATA_FILE")
 weight=$(jq -r '.weight' "$DATA_FILE")
 type=$(jq -r '.types[0].type.name' "$DATA_FILE")
 
 # Formatting the output
-formatted_output=$(echo "$name is of type $type, weighs ${weight}kg, and is ${height}m tall." | sed 's/\([0-9]*\)kg/\1kg/' | sed 's/\([0-9]*\)m/\1m/')
-
+#formatted_output=$(echo "Pikachu is of type $type, weighs ${weight}kg, and is ${height}m tall." | sed 's/\([0-9]*\)kg/\1kg/' | sed 's/\([0-9]*\)m/\1m/')
+formatted_output=$(echo "$type,$weight,$height" | awk -F, \
+    '{printf "Pikachu is of type %s, weighs %dkg, and is %.1fm tall.\n", $2, $3, $4/10}' \
+    | sed 's/\.0m/.0m/')
 # Output the result
 echo "$formatted_output"

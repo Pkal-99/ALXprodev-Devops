@@ -7,6 +7,7 @@ mkdir -p "$OUTPUT_DIR" # Create the directory if it doesn't exist
 
 fetch_pokemon_data() {
     POKEMON_IDENTIFIER="$1"
+    ERROR_FILE="errors.txt"
     if [ -z "$POKEMON_IDENTIFIER" ]; then
         echo "Error: No Pokémon identifier provided to fetch_pokemon_data."
         return 1
@@ -22,6 +23,7 @@ fetch_pokemon_data() {
         echo "Successfully saved data for ${POKEMON_IDENTIFIER} to ${OUTPUT_FILE}"
     else
         echo "Failed to fetch data for ${POKEMON_IDENTIFIER}."
+        echo "HTTP Status: $response" >> "$ERROR_FILE"
     fi
     }
 

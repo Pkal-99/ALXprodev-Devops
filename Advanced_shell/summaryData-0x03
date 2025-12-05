@@ -1,0 +1,47 @@
+#!/bin/bash
+
+
+DATA_DIR="pokemon_data"
+
+REPORT_FILE="pokemon_report.csv"
+
+# Create or clear the report file
+echo "Name,Height (m),Weight (kg)" > "$REPORT_FILE"
+
+# Variables to calculate totals for averages
+total_height=0
+total_weight=0
+count=0
+
+# Loop through JSON files in the data directory
+for json_file in "$DATA_DIR"/*.json; do
+    # Extract the name, height, and weight using jq
+    name=$(jq -r '.name' "$json_file")
+    height=$(jq -r '.height / 10' "$json_file")  # Convert from decimeters to meters
+    weight=$(jq -r '.weight / 10' "$json_file")  # Convert from hectograms to kilograms
+
+    # Append to the CSV report
+    echo "$name,$height,$weight" >> "$REPORT_FILE"
+
+    # Update totals for average calculation
+    total_height="$(awk "BEGIN {printf \"%.2f\", $total_height + $height}")"
+    total_weight="$(awk "BEGIN {printf \"%.2f\", $total_weight + $weight}")"
+    count=$((count + 1))
+done
+
+# Check if we have any Pokémon data
+if [[ $count -gt 0 ]]; then
+    # Calculate averages
+    average_height=$(awk "BEGIN {printf \"%.2f\", $total_height / $count}")
+    average_weight=$(awk "BEGIN {printf \"%.2f\", $total_weight / $count}")
+
+    # Append averages to the report
+    echo "" >> "$REPORT_FILE"  # Add a blank line before the averages
+    echo "Average Height: $average_height m" >> "$REPORT_FILE"
+    echo "Average Weight: $average_weight kg" >> "$REPORT_FILE"
+else
+    echo "No Pokémon data found to generate report."
+fi
+
+# Inform the user about the generated report
+echo "CSV Report generated at: $REPORT_FILE"

@@ -1,54 +1,49 @@
 #!/bin/bash
 
-# Directory to store Pokémon data
-DATA_DIR="pokemon_data"
+# List of Pokémon
+pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
-# Create the directory if it doesn't exist
-mkdir -p "$DATA_DIR"
+# Folder to store JSON files
+mkdir -p pokemon_data
 
-# List of Pokémon to fetch data for
-POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+# Array to hold PIDs
+pids=()
 
-# Function to fetch Pokémon data
+# Function to fetch Pokémon data with retry
 fetch_pokemon_data() {
-    local pokemon="$1"
-    echo "Fetching data for $pokemon..."
+    name=$1
+    retries=0
+    max_retries=3
 
-    # Initialize variables for attempts
-    attempts=0
-    max_attempts=3
-    success=false
-
-    # Retry logic for API requests
-    while [[ $attempts -lt $max_attempts ]]; do
-        # Fetch Pokémon data from the API
-        response=$(curl -s --fail "https://pokeapi.co/api/v2/pokemon/$pokemon")
-
-        # Check if the request was successful
-        if [[ $? -eq 0 && $(echo "$response" | jq -r '.name') == "$pokemon" ]]; then
-            # Save data to a file named after the Pokémon
-            echo "$response" > "$DATA_DIR/$pokemon.json"
-            echo "Saved data to $DATA_DIR/$pokemon.json ✅"
-            success=true
-            break
+    while [ $retries -lt $max_retries ]; do
+        if curl -s "https://pokeapi.co/api/v2/pokemon/${name,,}" -o "pokemon_data/${name}.json"; then
+            echo "$name fetched successfully."
+            return 0
         else
-            echo "Error fetching data for $pokemon. Attempt $((attempts + 1)) of $max_attempts."
-            attempts=$((attempts + 1))
-            sleep 1  # Wait 1 second before retrying
+            ((retries++))
+            echo "Retry $retries for $name..."
+            sleep 1
         fi
     done
 
-    if [[ $success == false ]]; then
-        echo "Failed to fetch data for $pokemon after $max_attempts attempts. Skipping..." >&2
-    fi
+    echo "Failed to fetch $name after $max_retries attempts" >> error.log
 }
 
-# Loop through the list of Pokémon and fetch data in parallel
-for pokemon in "${POKEMON_LIST[@]}"; do
-    fetch_pokemon_data "$pokemon" &  # Run the function in the background
+# Start parallel processes
+for name in "${pokemon_list[@]}"; do
+    fetch_pokemon_data "$name" &
+    pids+=($!)
 done
 
-# Wait for all background processes to complete
-wait
+# Wait for all background jobs and track failures
+for pid in "${pids[@]}"; do
+    wait "$pid" || {
+        echo "Process $pid failed. Killing remaining jobs..."
+        for other_pid in "${pids[@]}"; do
+            kill "$other_pid" 2>/dev/null
+        done
+        exit 1
+    }
+done
 
-echo "All data retrieval attempts completed."
+echo "All Pokémon fetched successfully."

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+DATA_FILE="data.json"
+
+# Check if the data file exists
+if [[ ! -f "$DATA_FILE" ]]; then
+    echo "Error: $DATA_FILE not found!"
+    exit 1
+fi
+
+# Extracting the required fields using jq
+name=$(jq -r '.name' "$DATA_FILE")
+height=$(jq -r '.height' "$DATA_FILE")
+weight=$(jq -r '.weight' "$DATA_FILE")
+type=$(jq -r '.types[0].type.name' "$DATA_FILE")
+
+# Formatting the output
+formatted_output=$(echo "$name is of type $type, weighs ${weight}kg, and is ${height}m tall." | sed 's/\([0-9]*\)kg/\1kg/' | sed 's/\([0-9]*\)m/\1m/')
+
+# Output the result
+echo "$formatted_output"
